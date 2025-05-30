@@ -28,7 +28,7 @@ console.log("📦 Node.js version:", process.version)
 //express middleware
 // app.use(cors());
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: 'https://task-manager-app-three-mauve.vercel.app/',
   credentials: true,
 }));
 app.use(express.json({ limit: "10mb" }))
