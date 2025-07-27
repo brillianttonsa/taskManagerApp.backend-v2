@@ -1,51 +1,59 @@
-import supabase from "../supabase/client.js"
+import { query } from "../config/database.js"
+// import { query } from "../config/neon.js"
 
 export const getStats = async (req, res) => {
   const userId = req.user.id
 
-  const { data: allTasks, error: error1 } = await supabase
-    .from("tasks")
-    .select("status, week_start")
-    .eq("user_id", userId)
-    .eq("archived", false)
+  try {
+    const result = await query(
+      `SELECT status, week_start
+       FROM tasks
+       WHERE user_id = $1 AND archived = false`,
+      [userId]
+    )
 
-  if (error1) return res.status(400).json({ error: error1.message })
+    const allTasks = result.rows
 
-  const total = allTasks.length
-  const completed = allTasks.filter((t) => t.status === "completed").length
-  const pending = allTasks.filter((t) => t.status === "pending").length
+    const total = allTasks.length
+    const completed = allTasks.filter((t) => t.status === "completed").length
+    const pending = allTasks.filter((t) => t.status === "pending").length
 
-  const recentWeeks = {}
+    const recentWeeks = {}
 
-  allTasks.forEach((task) => {
-    const week = task.week_start
-    if (!recentWeeks[week]) {
-      recentWeeks[week] = { total: 0, completed: 0, pending: 0 }
-    }
-    recentWeeks[week].total++
-    if (task.status === "completed") recentWeeks[week].completed++
-    if (task.status === "pending") recentWeeks[week].pending++
-  })
+    allTasks.forEach((task) => {
+      const week = task.week_start
+      if (!recentWeeks[week]) {
+        recentWeeks[week] = { total: 0, completed: 0, pending: 0 }
+      }
+      recentWeeks[week].total++
+      if (task.status === "completed") recentWeeks[week].completed++
+      if (task.status === "pending") recentWeeks[week].pending++
+    })
 
-  const weeklyData = Object.entries(recentWeeks)
-    .map(([week_start, stats]) => ({
-      week_start,
-      total_tasks: stats.total,
-      completed_tasks: stats.completed,
-      pending_tasks: stats.pending,
-    }))
-    .sort((a, b) => new Date(b.week_start) - new Date(a.week_start))
-    .slice(0, 4)
+    const weeklyData = Object.entries(recentWeeks)
+      .map(([week_start, stats]) => ({
+        week_start,
+        total_tasks: stats.total,
+        completed_tasks: stats.completed,
+        pending_tasks: stats.pending,
+      }))
+      .sort((a, b) => new Date(b.week_start) - new Date(a.week_start))
+      .slice(0, 4)
 
-  res.json({
-    currentWeek: {
-      total_tasks: total,
-      completed_tasks: completed,
-      pending_tasks: pending,
-    },
-    weeklyData,
-  })
+    res.json({
+      currentWeek: {
+        total_tasks: total,
+        completed_tasks: completed,
+        pending_tasks: pending,
+      },
+      weeklyData,
+    })
+  } catch (err) {
+    console.error("getStats error:", err)
+    res.status(500).json({ error: "Server error fetching stats" })
+  }
 }
+
 
 export const getAnalytics = async (req, res) => {
   const { timeframe = "month" } = req.query
@@ -57,41 +65,47 @@ export const getAnalytics = async (req, res) => {
 
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - intervalDays)
+  const startDateISO = startDate.toISOString()
 
-  const { data: tasks, error } = await supabase
-    .from("tasks")
-    .select("created_at, status, priority")
-    .eq("user_id", userId)
-    .eq("archived", false)
-    .gte("created_at", startDate.toISOString())
+  try {
+    const result = await query(
+      `SELECT created_at, status, priority
+       FROM tasks
+       WHERE user_id = $1 AND archived = false AND created_at >= $2`,
+      [userId, startDateISO]
+    )
 
-  if (error) return res.status(400).json({ error: error.message })
+    const tasks = result.rows
 
-  // Task trends by day
-  const trendsMap = {}
-  const priorityMap = {}
+    const trendsMap = {}
+    const priorityMap = {}
 
-  tasks.forEach((task) => {
-    const date = task.created_at.split("T")[0]
-    trendsMap[date] = trendsMap[date] || { date, total_tasks: 0, completed_tasks: 0 }
-    trendsMap[date].total_tasks++
-    if (task.status === "completed") trendsMap[date].completed_tasks++
+    tasks.forEach((task) => {
+      const date = task.created_at.toISOString().split("T")[0]
+      trendsMap[date] = trendsMap[date] || { date, total_tasks: 0, completed_tasks: 0 }
+      trendsMap[date].total_tasks++
+      if (task.status === "completed") trendsMap[date].completed_tasks++
 
-    priorityMap[task.priority] = priorityMap[task.priority] || {
-      priority: task.priority,
-      count: 0,
-      completed: 0,
-    }
-    priorityMap[task.priority].count++
-    if (task.status === "completed") priorityMap[task.priority].completed++
-  })
+      priorityMap[task.priority] = priorityMap[task.priority] || {
+        priority: task.priority,
+        count: 0,
+        completed: 0,
+      }
+      priorityMap[task.priority].count++
+      if (task.status === "completed") priorityMap[task.priority].completed++
+    })
 
-  const trends = Object.values(trendsMap).sort((a, b) => new Date(b.date) - new Date(a.date))
-  const priorityDistribution = Object.values(priorityMap)
+    const trends = Object.values(trendsMap).sort((a, b) => new Date(b.date) - new Date(a.date))
+    const priorityDistribution = Object.values(priorityMap)
 
-  res.json({
-    trends,
-    priorityDistribution,
-    timeframe,
-  })
+    res.json({
+      trends,
+      priorityDistribution,
+      timeframe,
+    })
+  } catch (err) {
+    console.error("getAnalytics error:", err)
+    res.status(500).json({ error: "Server error fetching analytics" })
+  }
 }
+
