@@ -174,3 +174,4 @@ $$ LANGUAGE plpgsql;
 -- You can set up a cron job to run this periodically:
 -- SELECT cleanup_expired_tokens();
 -- SELECT archive_old_tasks();
+

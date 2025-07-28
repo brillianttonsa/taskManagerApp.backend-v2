@@ -8,6 +8,7 @@ export const getCurrentWeekStart = () => {
   return weekStart
 }
 
+
 export const formatDate = (date) => {
   return new Date(date).toISOString().split("T")[0]
 }

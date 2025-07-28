@@ -9,4 +9,5 @@ router.use(authenticateToken)
 router.get("/stats", getStats)
 router.get("/analytics", getAnalytics)
 
+
 export default router

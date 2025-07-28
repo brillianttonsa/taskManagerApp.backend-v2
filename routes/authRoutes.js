@@ -9,4 +9,5 @@ router.post("/register", validateRegistration, asyncHandler(register))
 router.post("/login", validateLogin, asyncHandler(login))
 router.post("/forgot-password", asyncHandler(forgotPassword))
 
+
 export default router

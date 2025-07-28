@@ -12,6 +12,7 @@ import {
 } from "../controllers/familyController.js"
 import { validateTaskId, validateFamily } from "../middleware/validation.js"
 
+
 const router = express.Router()
 router.use(authenticateToken)
 

@@ -45,3 +45,4 @@ export const verifyToken = (token) => {
 }
 
 export default { authenticateToken, generateToken, verifyToken }
+

@@ -114,3 +114,4 @@ export const emailTemplates = {
 }
 
 export default { setupEmail, sendEmail, emailTemplates }
+
